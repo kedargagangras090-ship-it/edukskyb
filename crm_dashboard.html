@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Education CRM Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #E7F5FE;
+      color: #1F2937;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar gradient matching the exact sky-blue tone */
+    .sidebar-gradient {
+      background: linear-gradient(180deg, #62C1F3 0%, #58B8ED 55%, #51B2E8 100%);
+    }
+
+    /* Active sidebar item highlight bar */
+    .nav-item {
+      position: relative;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .nav-item.active {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 24px;
+      background-color: #FFFFFF;
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px;
+    }
+
+    .nav-item:not(.active):hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Card styling with soft elevation shadow */
+    .crm-card {
+      background: #FFFFFF;
+      border-radius: 6px;
+      box-shadow: 0 3px 12px rgba(28, 92, 134, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .crm-card:hover {
+      box-shadow: 0 6px 18px rgba(28, 92, 134, 0.12), 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Custom search pill input */
+    .search-pill {
+      background-color: #62C1F3;
+      border-radius: 9999px;
+      transition: box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .search-pill:focus-within {
+      background-color: #55B7EC;
+      box-shadow: 0 0 0 3px rgba(98, 193, 243, 0.28);
+    }
+
+    .search-pill input::placeholder {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    /* Floating interactive chart tooltip */
+    #chart-tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: rgba(23, 52, 77, 0.94);
+      color: #FFFFFF;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translate(-50%, -115%);
+      transition: opacity 0.15s ease;
+      z-index: 50;
+      white-space: nowrap;
+    }
+
+    /* Donut ring smooth transition */
+    .donut-segment {
+      transition: stroke-dashoffset 0.8s ease-out;
+    }
+
+    /* Interactive bar hover */
+    .chart-bar {
+      transition: opacity 0.18s ease, filter 0.18s ease;
+      cursor: pointer;
+    }
+
+    .chart-bar:hover {
+      filter: brightness(0.94);
+    }
+
+    /* Responsive adjustments for mobile drawer */
+    @media (max-width: 1023px) {
+      .sidebar-container {
+        transform: translateX(-100%);
+        transition: transform 0.28s ease;
+      }
+      .sidebar-container.open {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex bg-[#E7F5FE]">
+
+  <!-- Floating Tooltip -->
+  <div id="chart-tooltip"></div>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/30 z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <!-- Left Navigation Sidebar -->
+  <aside id="sidebar" class="sidebar-container sidebar-gradient fixed lg:static inset-y-0 left-0 z-40 w-[225px] shrink-0 flex flex-col select-none">
+    <!-- Top blank space matching reference image (~84px) -->
+    <div class="h-[84px] flex items-center justify-end px-4 lg:hidden">
+      <button onclick="toggleSidebar()" class="text-white p-2 rounded-lg hover:bg-white/10" aria-label="Close Menu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Navigation List -->
+    <nav class="flex flex-col mt-1 space-y-0.5" aria-label="Main Navigation">
+      <!-- 1. Dashboard (Active) -->
+      <button type="button" data-nav="Dashboard" class="nav-item active w-full flex items-center gap-4 px-8 py-3 text-white text-[15px] font-normal tracking-wide text-left cursor-pointer">
+        <!-- Home Icon -->
+        <svg class="w-[18px] h-[18px] shrink-0 fill-current" viewBox="0 0 24 24">
+          <path d="M12 3.172L2.293 12.879a1 1 0 001.414 1.414L5 13.001V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.999l1.293 1.292a1 1 0 001.414-1.414L12 3.172z"/>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+
+      <!-- 2. Inquiries -->
+      <button type="button" data-nav="Inquiries" class="nav-item w-full flex items-center gap-4 px-8 py-3 text-white text-[15px] font-normal tracking-wide text-left cursor-pointer">
+        <!-- List / Bullet Icon -->
+        <svg class="w-[18px] h-[18px] shrink-0 fill-current" viewBox="0 0 24 24">
+          <circle cx="4.5" cy="6.5" r="1.5"/>
+          <rect x="8" y="5.5" width="12" height="2" rx="1"/>
+          <circle cx="4.5" cy="12" r="1.5"/>
+          <rect x="8" y="11" width="12" height="2" rx="1"/>
+          <circle cx="4.5" cy="17.5" r="1.5"/>
+          <rect x="8" y="16.5" width="12" height="2" rx="1"/>
+        </svg>
+        <span>Inquiries</span>
+      </button>
+
+      <!-- 3. Admission -->
+      <button type="button" data-nav="Admission" class="nav-item w-full flex items-center gap-4 px-8 py-3 text-white text-[15px] font-normal tracking-wide text-left cursor-pointer">
+        <!-- Calendar Icon -->
+        <svg class="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <rect x="3" y="4.5" width="18" height="16" rx="2" />
+          <path d="M16 2.5v4M8 2.5v4M3 9.5h18" stroke-linecap="round"/>
+          <circle cx="8" cy="13.5" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="13.5" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="16" cy="13.5" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="8" cy="17" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/>
+          <circle cx="16" cy="17" r="0.9" fill="currentColor" stroke="none"/>
+        </svg>
+        <span>Admission</span>
+      </button>
+
+      <!-- 4. Report -->
+      <button type="button" data-nav="Report" class="nav-item w-full flex items-center gap-4 px-8 py-3 text-white text-[15px] font-normal tracking-wide text-left cursor-pointer">
+        <!-- Bar Chart Icon -->
+        <svg class="w-[18px] h-[18px] shrink-0 fill-current" viewBox="0 0 24 24">
+          <rect x="4" y="14" width="2.6" height="6" rx="1"/>
+          <rect x="8.8" y="11" width="2.6" height="9" rx="1"/>
+          <rect x="13.6" y="7.5" width="2.6" height="12.5" rx="1"/>
+          <rect x="18.4" y="4.5" width="2.6" height="15.5" rx="1"/>
+        </svg>
+        <span>Report</span>
+      </button>
+
+      <!-- 5. Setting -->
+      <button type="button" data-nav="Setting" class="nav-item w-full flex items-center gap-4 px-8 py-3 text-white text-[15px] font-normal tracking-wide text-left cursor-pointer">
+        <!-- Gear / Cog Icon -->
+        <svg class="w-[18px] h-[18px] shrink-0 fill-current" viewBox="0 0 24 24">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+        <span>Setting</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Right Main Wrapper -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top White Header Bar -->
+    <header class="bg-white h-[74px] px-5 sm:px-8 flex items-center justify-between shrink-0 border-b border-[#E3F1FB]">
+      <div class="flex items-center gap-3 flex-1">
+        <!-- Mobile Menu Toggle -->
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-[#56B8EE] hover:bg-[#E7F5FE]" aria-label="Open Menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <!-- Pill-Shaped Sky Blue Search Input -->
+        <div class="search-pill flex items-center w-full max-w-[235px] h-[34px] px-3.5">
+          <svg class="w-[17px] h-[17px] text-white shrink-0 mr-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7" />
+            <path stroke-linecap="round" d="M20 20l-3.8-3.8" />
+          </svg>
+          <input
+            id="dashboard-search"
+            type="text"
+            aria-label="Search dashboard"
+            class="bg-transparent text-white text-sm w-full focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- User Greeting & Illustrated Avatar -->
+      <div class="flex items-center gap-3">
+        <span class="text-[#222222] text-[13.5px] font-medium">Hi, Abhi!</span>
+        <!-- Sky Blue Circle User Avatar -->
+        <div class="w-[34px] h-[34px] rounded-full bg-[#65C3F4] overflow-hidden flex items-end justify-center shadow-xs shrink-0">
+          <svg viewBox="0 0 64 64" class="w-full h-full">
+            <!-- Circle bg -->
+            <circle cx="32" cy="32" r="32" fill="#65C3F4" />
+            <!-- Shoulders / Shirt -->
+            <path d="M14 64c0-10.5 8-17 18-17s18 6.5 18 17H14z" fill="#F2F7FB" />
+            <path d="M26 47l6 7 6-7" fill="#D5E7F5" />
+            <!-- Neck -->
+            <rect x="28" y="38" width="8" height="10" rx="3" fill="#F1C29B" />
+            <!-- Ears -->
+            <circle cx="21" cy="29" r="3" fill="#EAB68E" />
+            <circle cx="43" cy="29" r="3" fill="#EAB68E" />
+            <!-- Head -->
+            <path d="M21 26c0-7.5 4.8-13 11-13s11 5.5 11 13v4c0 6.5-4.8 11.5-11 11.5S21 36.5 21 30v-4z" fill="#F6CAA6" />
+            <!-- Hair -->
+            <path d="M20.5 26.5c-.5-8.5 4.5-15 12-15 6.8 0 11.5 5 11 14.5-.3-4.2-2.2-7-5.5-7.5-3.5-.5-6.5.8-10 .5-3.8-.3-6.2 2.2-7.5 7.5z" fill="#4B2E20" />
+            <!-- Eyes & Eyebrows -->
+            <path d="M25.5 25.5c1.2-.8 2.8-.8 4 0" stroke="#4B2E20" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+            <path d="M34.5 25.5c1.2-.8 2.8-.8 4 0" stroke="#4B2E20" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+            <circle cx="27.5" cy="28" r="1.4" fill="#2D1B12" />
+            <circle cx="36.5" cy="28" r="1.4" fill="#2D1B12" />
+            <!-- Smile -->
+            <path d="M29.5 34c1.5 1.3 3.5 1.3 5 0" stroke="#C57B57" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dashboard Content Area -->
+    <main class="flex-1 px-4 sm:px-8 pt-3.5 pb-6 max-w-[1440px] w-full mx-auto">
+      <!-- Page Title -->
+      <h1 id="page-heading" class="text-[#1E242B] text-[14.5px] font-medium mb-2.5 tracking-[-0.01em]">Dashboard</h1>
+
+      <!-- Master Dashboard Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- ==================== LEFT 8 COLUMNS (Rows 1, 2, 3 Left/Center) ==================== -->
+        <div class="lg:col-span-9 flex flex-col gap-4">
+
+          <!-- ROW 1 LEFT: Leads - Month Wise (Line / Area Chart) -->
+          <section class="crm-card p-5 pb-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-[#1A1A1A] text-[15px] font-medium pl-4">Leads - Month Wise</h2>
+            </div>
+            <div class="w-full relative">
+              <svg id="leads-line-chart" viewBox="0 0 760 205" class="w-full h-auto overflow-visible" aria-label="Leads Month Wise Chart"></svg>
+            </div>
+          </section>
+
+          <!-- ROW 2 LEFT: 3 Equal Metric Sparkline Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+            <!-- Card 3: Enrolled -->
+            <section class="crm-card pt-5 px-2.5 pb-4 flex flex-col items-center justify-between min-h-[192px]">
+              <div class="text-center mt-1">
+                <h3 class="text-[#1A1A1A] text-[15px] font-medium mb-2">Enrolled</h3>
+                <div class="text-[#5DBDF1] text-[31px] font-medium leading-none tracking-tight mb-2">0</div>
+                <div class="text-[#333333] text-[11.5px] font-normal">FY - 2019-20</div>
+              </div>
+              <div class="w-full h-[52px] mt-3"></div>
+            </section>
+
+            <!-- Card 4: Paid Leads -->
+            <section class="crm-card pt-5 px-2.5 pb-4 flex flex-col items-center justify-between min-h-[192px]">
+              <div class="text-center mt-1">
+                <h3 class="text-[#1A1A1A] text-[15px] font-medium mb-2">Paid Leads</h3>
+                <div class="text-[#5DBDF1] text-[31px] font-medium leading-none tracking-tight mb-2">0</div>
+                <div class="text-[#333333] text-[11.5px] font-normal">FY - 2019-20</div>
+              </div>
+              <div class="w-full h-[52px] mt-3"></div>
+            </section>
+
+            <!-- Card 5: Paid Application -->
+            <section class="crm-card pt-5 px-2.5 pb-4 flex flex-col items-center justify-between min-h-[192px]">
+              <div class="text-center mt-1">
+                <h3 class="text-[#1A1A1A] text-[15px] font-medium mb-2">Paid Application</h3>
+                <div class="text-[#5DBDF1] text-[31px] font-medium leading-none tracking-tight mb-2">0</div>
+                <div class="text-[#333333] text-[11.5px] font-normal">FY - 2019-20</div>
+              </div>
+              <div class="w-full h-[52px] mt-3"></div>
+            </section>
+          </div>
+
+          <!-- ROW 3 LEFT: Enrolled Percentage (1/3) + Coursewise Enrollments (2/3) -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+            <!-- Card 7: Enrolled Percentage -->
+            <section class="crm-card p-4 flex flex-col items-center justify-between min-h-[218px]">
+              <h3 class="text-[#1A1A1A] text-[12px] font-medium mt-1">Enrolled Percentage</h3>
+
+              <!-- Empty Donut Ring -->
+              <div class="relative w-[124px] h-[124px] flex items-center justify-center my-1">
+                <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+                  <!-- Light Gray Background Track -->
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="47"
+                    fill="none"
+                    stroke="#E1E4E8"
+                    stroke-width="7.5"
+                  />
+                  <!-- 0% Sky Blue Arc -->
+                  <circle
+                    id="enrolled-donut"
+                    cx="60"
+                    cy="60"
+                    r="47"
+                    fill="none"
+                    stroke="#5CBCEF"
+                    stroke-width="7.5"
+                    stroke-linecap="round"
+                    stroke-dasharray="295.31"
+                    stroke-dashoffset="295.31"
+                    class="donut-segment"
+                  />
+                </svg>
+                <span class="absolute text-[#264D6B] text-[25px] font-medium tracking-tight">0%</span>
+              </div>
+
+              <div class="text-[#333333] text-[11px] font-normal mb-1">FY - 2019-20</div>
+            </section>
+
+            <!-- Card 8: Coursewise Enrollments (Spans 2 columns under Paid Leads + Paid Application) -->
+            <section class="crm-card sm:col-span-2 p-4 pb-3 flex flex-col justify-between min-h-[218px]">
+              <h3 class="text-[#1A1A1A] text-[13px] font-medium pl-2">Coursewise Enrollments</h3>
+              <div class="w-full mt-1">
+                <svg id="coursewise-bar-chart" viewBox="0 0 480 175" class="w-full h-auto overflow-visible" aria-label="Coursewise Enrollments Bar Chart"></svg>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <!-- ==================== RIGHT 3 COLUMNS (Counselor Performance + Name / Total Closed) ==================== -->
+        <div class="lg:col-span-3 flex flex-col gap-4">
+
+          <!-- ROW 1 RIGHT: Card 2 - Counselor Performance -->
+          <section class="crm-card p-5 flex flex-col justify-between min-h-[248px]">
+            <h2 class="text-[#1A1A1A] text-[13.5px] font-medium">Counselor Performance</h2>
+            <div class="w-full flex-1 flex items-center justify-center pt-4 pb-1">
+              <svg id="counselor-bar-chart" viewBox="0 0 260 165" class="w-full h-auto overflow-visible" aria-label="Counselor Performance Empty Area"></svg>
+            </div>
+          </section>
+
+          <!-- ROW 2 & 3 RIGHT: Card 6 - Name / Total Closed -->
+          <section class="crm-card p-4 pb-5 flex-1 flex flex-col">
+            <!-- Header Row -->
+            <div class="flex items-center justify-between px-1 pt-1 pb-4">
+              <span class="text-[#1A1A1A] text-[15px] font-medium">Name</span>
+              <span class="text-[#1A1A1A] text-[14.5px] font-medium">Total Closed</span>
+            </div>
+
+            <!-- Empty Counselor List Body -->
+            <div id="counselor-list" class="flex-1 flex flex-col items-center justify-center text-slate-400 text-[13px] py-8">
+              No records found
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. AXIS LABELS (Empty state - no plotted values or records)
+    // =========================================================================
+
+    const monthlyLabels = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG'];
+
+    const coursewiseLabels = [
+      'Facebook Ads',
+      'Google Ads',
+      'Shiksha',
+      'CollegeDunia',
+      'Website Form'
+    ];
+
+    // =========================================================================
+    // 2. TOOLTIP HELPER
+    // =========================================================================
+    const tooltip = document.getElementById('chart-tooltip');
+
+    function showTooltip(evt, text) {
+      tooltip.textContent = text;
+      tooltip.style.left = `${evt.clientX}px`;
+      tooltip.style.top = `${evt.clientY}px`;
+      tooltip.style.opacity = '1';
+    }
+
+    function hideTooltip() {
+      tooltip.style.opacity = '0';
+    }
+
+    // =========================================================================
+    // 3. RENDER EMPTY "LEADS - MONTH WISE" GRID & AXES
+    // =========================================================================
+    function renderLeadsLineChart() {
+      const svg = document.getElementById('leads-line-chart');
+      const ns = 'http://www.w3.org/2000/svg';
+
+      const padLeft = 48;
+      const padRight = 22;
+      const padTop = 14;
+      const padBottom = 26;
+      const width = 760;
+      const height = 205;
+      const chartW = width - padLeft - padRight;
+      const chartH = height - padTop - padBottom;
+
+      const minVal = 1000;
+      const maxVal = 6000;
+      const yTicks = [6000, 5000, 4000, 3000, 2000, 1000];
+
+      const getY = (val) => {
+        const clamped = Math.max(minVal, Math.min(maxVal, val));
+        return padTop + ((maxVal - clamped) / (maxVal - minVal)) * chartH;
+      };
+
+      const stepX = chartW / (monthlyLabels.length - 1);
+      const getX = (idx) => padLeft + idx * stepX;
+
+      // Horizontal Dotted Grid Lines & Y-Axis Labels
+      yTicks.forEach((tick) => {
+        const y = getY(tick);
+
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', padLeft - 8);
+        line.setAttribute('x2', width - padRight + 10);
+        line.setAttribute('y1', y);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', '#CBD5E1');
+        line.setAttribute('stroke-width', '1.1');
+        line.setAttribute('stroke-dasharray', '1.5, 3.5');
+        svg.appendChild(line);
+
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', padLeft - 14);
+        text.setAttribute('y', y + 3.5);
+        text.setAttribute('text-anchor', 'end');
+        text.setAttribute('fill', '#2B3440');
+        text.setAttribute('font-size', '9.5');
+        text.setAttribute('font-weight', '500');
+        text.textContent = tick;
+        svg.appendChild(text);
+      });
+
+      // X-axis Month Labels (No plotted line or points)
+      monthlyLabels.forEach((month, i) => {
+        const label = document.createElementNS(ns, 'text');
+        label.setAttribute('x', getX(i));
+        label.setAttribute('y', height - 5);
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('fill', '#2B3440');
+        label.setAttribute('font-size', '9.5');
+        label.setAttribute('font-weight', '500');
+        label.textContent = month;
+        svg.appendChild(label);
+      });
+    }
+
+    // =========================================================================
+    // 4. RENDER EMPTY "COUNSELOR PERFORMANCE" AREA
+    // =========================================================================
+    function renderCounselorBarChart() {
+      // Intentionally empty canvas for Counselor Performance card
+    }
+
+    // =========================================================================
+    // 5. RENDER EMPTY "COURSEWISE ENROLLMENTS" GRID & AXES
+    // =========================================================================
+    function renderCoursewiseBarChart() {
+      const svg = document.getElementById('coursewise-bar-chart');
+      const ns = 'http://www.w3.org/2000/svg';
+
+      const padLeft = 42;
+      const padRight = 14;
+      const padTop = 10;
+      const padBottom = 24;
+      const width = 480;
+      const height = 175;
+      const chartW = width - padLeft - padRight;
+      const chartH = height - padTop - padBottom;
+
+      const minVal = 1000;
+      const maxVal = 6500;
+      const yTicks = [6000, 5000, 4000, 3000, 2000, 1000];
+
+      const getY = (val) => {
+        return padTop + ((maxVal - val) / (maxVal - minVal)) * chartH;
+      };
+
+      // Horizontal Dotted Grid Lines & Y-Axis Labels
+      yTicks.forEach((tick) => {
+        const y = getY(tick);
+
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', padLeft);
+        line.setAttribute('x2', width - padRight);
+        line.setAttribute('y1', y);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', '#CBD5E1');
+        line.setAttribute('stroke-width', '1.1');
+        line.setAttribute('stroke-dasharray', '1.5, 3.5');
+        svg.appendChild(line);
+
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', padLeft - 8);
+        text.setAttribute('y', y + 3);
+        text.setAttribute('text-anchor', 'end');
+        text.setAttribute('fill', '#2B3440');
+        text.setAttribute('font-size', '8.5');
+        text.setAttribute('font-weight', '500');
+        text.textContent = tick;
+        svg.appendChild(text);
+      });
+
+      const colW = chartW / coursewiseLabels.length;
+
+      // X-axis Category Labels (No vertical bars)
+      coursewiseLabels.forEach((category, i) => {
+        const centerX = padLeft + colW * i + colW / 2;
+
+        const label = document.createElementNS(ns, 'text');
+        label.setAttribute('x', centerX);
+        label.setAttribute('y', height - 6);
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('fill', '#2B3440');
+        label.setAttribute('font-size', '8.5');
+        label.setAttribute('font-weight', '500');
+        label.textContent = category;
+        svg.appendChild(label);
+      });
+    }
+
+    // =========================================================================
+    // 6. RENDER EMPTY "NAME / TOTAL CLOSED" COUNSELOR LIST
+    // =========================================================================
+    function renderCounselorList() {
+      const container = document.getElementById('counselor-list');
+      container.innerHTML = `<span class="text-slate-400 text-[13px]">No records found</span>`;
+    }
+
+    // =========================================================================
+    // 7. INTERACTIVE NAVIGATION & SEARCH
+    // =========================================================================
+    function initInteractivity() {
+      const navButtons = document.querySelectorAll('.nav-item');
+      const pageHeading = document.getElementById('page-heading');
+
+      navButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          navButtons.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          const label = btn.getAttribute('data-nav');
+          pageHeading.textContent = label;
+
+          if (window.innerWidth < 1024) {
+            toggleSidebar(false);
+          }
+        });
+      });
+    }
+
+    function toggleSidebar(forceState) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isOpen = typeof forceState === 'boolean' ? forceState : !sidebar.classList.contains('open');
+
+      if (isOpen) {
+        sidebar.classList.add('open');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.remove('open');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    // Initialize everything on DOM load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderLeadsLineChart();
+      renderCounselorBarChart();
+      renderCoursewiseBarChart();
+      renderCounselorList();
+      initInteractivity();
+    });
+  </script>
+</body>
+</html>
